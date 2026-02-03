@@ -4,7 +4,7 @@ const apiKey = import.meta.env.VITE_GEMINI_API_KEY
 const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null
 
 export function getGeminiModel(): GenerativeModel | null {
-  return genAI ? genAI.getGenerativeModel({ model: 'gemini-1.5-flash' }) : null
+  return genAI ? genAI.getGenerativeModel({ model: 'gemini-pro' }) : null
 }
 
 export interface SyllabusTopic {
@@ -117,6 +117,7 @@ Respond with ONLY a valid JSON array, no markdown or extra text. Example format:
     }))
   } catch (error) {
     console.error('❌ Gemini API error:', error)
+    alert(`⚠️ Gemini API Error: ${error instanceof Error ? error.message : String(error)}\n\nFalling back to dummy content. Check console for details.`)
     return getFallbackCourseTopics(categoryName, alreadyLearnedTopicTitles.length > 0)
   }
 }
