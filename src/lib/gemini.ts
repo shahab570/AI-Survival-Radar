@@ -4,7 +4,7 @@ const apiKey = import.meta.env.VITE_GEMINI_API_KEY
 const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null
 
 export function getGeminiModel(): GenerativeModel | null {
-  return genAI ? genAI.getGenerativeModel({ model: 'gemini-pro' }) : null
+  return genAI ? genAI.getGenerativeModel({ model: 'gemini-1.5-pro' }) : null
 }
 
 export interface SyllabusTopic {
