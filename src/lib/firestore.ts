@@ -299,6 +299,10 @@ export async function createCourse(
   return ref.id
 }
 
+export async function deleteCourse(courseId: string): Promise<void> {
+  await deleteDoc(doc(db, COURSES, courseId))
+}
+
 // ---- Course progress ----
 
 export async function getProgressByCourse(

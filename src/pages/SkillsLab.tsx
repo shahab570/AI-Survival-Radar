@@ -17,10 +17,12 @@ import {
   deleteCategory,
   getCoursesByCategory,
   getProgressByUserForCourses,
+  deleteCourse,
 } from '../lib/firestore'
 import type { LearningCategory, Course, CourseProgress } from '../types'
 import { GenerateCourseModal } from '../components/GenerateCourseModal'
 import { CategoryEditModal } from '../components/CategoryEditModal'
+import { ContextMenu } from '../components/ContextMenu'
 import { cn } from '../lib/utils'
 
 const DEFAULT_CATEGORIES = ['Coding', 'Prompt Engineering', 'Design', 'Marketing']
@@ -36,6 +38,8 @@ export function SkillsLab() {
   const [categoryToEdit, setCategoryToEdit] = useState<(LearningCategory & { id: string }) | null>(null)
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null)
   const [newCategoryName, setNewCategoryName] = useState('')
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; categoryId: string } | null>(null)
+  const [courseContextMenu, setCourseContextMenu] = useState<{ x: number; y: number; courseId: string } | null>(null)
 
   const selectedCategory = categories.find((c) => c.id === selectedCategoryId)
 
@@ -110,6 +114,22 @@ export function SkillsLab() {
       getCoursesByCategory(firebaseUser.uid, selectedCategoryId).then(setCourses)
   }
 
+  const handleCategoryContextMenu = (e: React.MouseEvent, categoryId: string) => {
+    e.preventDefault()
+    setContextMenu({ x: e.clientX, y: e.clientY, categoryId })
+  }
+
+  const handleCourseContextMenu = (e: React.MouseEvent, courseId: string) => {
+    e.preventDefault()
+    setCourseContextMenu({ x: e.clientX, y: e.clientY, courseId })
+  }
+
+  const handleDeleteCourse = async (courseId: string) => {
+    await deleteCourse(courseId)
+    if (selectedCategoryId && firebaseUser?.uid)
+      getCoursesByCategory(firebaseUser.uid, selectedCategoryId).then(setCourses)
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
@@ -128,39 +148,20 @@ export function SkillsLab() {
       {/* Category tabs */}
       <div className="flex flex-wrap items-center gap-2">
         {categories.map((cat) => (
-          <div
+          <button
             key={cat.id}
+            type="button"
+            onClick={() => setSelectedCategoryId(cat.id)}
+            onContextMenu={(e) => handleCategoryContextMenu(e, cat.id)}
             className={cn(
-              'flex items-center gap-1 rounded-lg border px-3 py-2 transition',
+              'rounded-lg border px-4 py-2 font-medium transition',
               selectedCategoryId === cat.id
                 ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400'
                 : 'border-slate-600 bg-slate-800/50 text-slate-300 hover:border-slate-500'
             )}
           >
-            <button
-              type="button"
-              onClick={() => setSelectedCategoryId(cat.id)}
-              className="font-medium"
-            >
-              {cat.name}
-            </button>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); setCategoryToEdit(cat) }}
-              className="rounded p-1 text-slate-400 hover:bg-slate-700 hover:text-white"
-              aria-label="Edit category"
-            >
-              <Pencil className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); setCategoryToDelete(cat.id) }}
-              className="rounded p-1 text-slate-400 hover:bg-red-500/20 hover:text-red-400"
-              aria-label="Delete category"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          </div>
+            {cat.name}
+          </button>
         ))}
         <div className="flex items-center gap-2 rounded-lg border border-dashed border-slate-600 px-3 py-2">
           <input
@@ -209,8 +210,8 @@ export function SkillsLab() {
                 const progress = progressByCourse[course.id]
                 const pct = progress && course.topics?.length
                   ? Math.round(
-                      (Object.values(progress.topicCompleted || {}).filter(Boolean).length / course.topics.length) * 100
-                    )
+                    (Object.values(progress.topicCompleted || {}).filter(Boolean).length / course.topics.length) * 100
+                  )
                   : 0
                 return (
                   <li key={course.id}>
