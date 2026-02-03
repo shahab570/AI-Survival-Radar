@@ -96,22 +96,27 @@ Respond with ONLY a valid JSON array, no markdown or extra text. Example format:
 [{"title":"...","description":"...","estimatedMinutes":15,"keyPoints":["..."],"projects":[],"exercises":[],"resources":[]}]`
 
   if (!model) {
+    console.error('❌ Gemini model not initialized. API key:', import.meta.env.VITE_GEMINI_API_KEY ? 'EXISTS' : 'MISSING')
     return getFallbackCourseTopics(categoryName, alreadyLearnedTopicTitles.length > 0)
   }
 
+  console.log('✅ Gemini API key loaded, generating course...')
   try {
     const result = await model.generateContent(prompt)
     const text = result.response.text()
+    console.log('📝 Raw Gemini response:', text.substring(0, 200))
     const cleaned = text.replace(/```json?\s*|\s*```/g, '').trim()
     const parsed = JSON.parse(cleaned) as CourseTopicInput[]
     if (!Array.isArray(parsed)) return getFallbackCourseTopics(categoryName, alreadyLearnedTopicTitles.length > 0)
+    console.log('✅ Successfully generated', parsed.length, 'topics with Gemini AI')
     return parsed.slice(0, 8).map((t, i) => ({
       ...t,
       id: `topic-${i}`,
       title: t.title ?? '',
       description: t.description ?? '',
     }))
-  } catch {
+  } catch (error) {
+    console.error('❌ Gemini API error:', error)
     return getFallbackCourseTopics(categoryName, alreadyLearnedTopicTitles.length > 0)
   }
 }
