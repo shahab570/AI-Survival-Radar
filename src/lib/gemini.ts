@@ -4,7 +4,7 @@ const apiKey = import.meta.env.VITE_GEMINI_API_KEY
 const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null
 
 export function getGeminiModel(): GenerativeModel | null {
-  return genAI ? genAI.getGenerativeModel({ model: 'gemini-1.5-pro' }) : null
+  return genAI ? genAI.getGenerativeModel({ model: 'gemini-2.5-flash' }) : null
 }
 
 export interface SyllabusTopic {
@@ -73,7 +73,10 @@ export async function generateAdaptiveCourseSyllabus(
   categoryName: string,
   goal: string,
   level: string,
-  alreadyLearnedTopicTitles: string[]
+  alreadyLearnedTopicTitles: string[],
+  detailedGoal?: string,
+  learningStyle?: string,
+  courseStructure?: string
 ): Promise<CourseTopicInput[]> {
   const model = getGeminiModel()
   const excludeHint =
@@ -81,8 +84,16 @@ export async function generateAdaptiveCourseSyllabus(
       ? ` The user has already completed courses in this category covering these topics - EXCLUDE them and only suggest NEW, more advanced topics: ${alreadyLearnedTopicTitles.join(', ')}.`
       : ' This is their first course in this category - provide a solid foundation (beginner-friendly if level is Beginner).'
 
+  const preferencesHint = detailedGoal || learningStyle || courseStructure
+    ? `\n\nUser Preferences:
+${detailedGoal ? `- Specific goal: ${detailedGoal}` : ''}
+${learningStyle ? `- Learning style: ${learningStyle}` : ''}
+${courseStructure ? `- Course structure: ${courseStructure}` : ''}`
+    : ''
+
   const prompt = `Create a personalized learning curriculum for the category "${categoryName}".
-User goal: ${goal}. Experience level: ${level}.${excludeHint}
+User goal: ${goal}. Experience level: ${level}.${excludeHint}${preferencesHint}
+
 Generate 6-8 progressive topics. For each topic provide:
 - title (short, clear)
 - description (2-3 sentences)
@@ -90,8 +101,21 @@ Generate 6-8 progressive topics. For each topic provide:
 - keyPoints (array of 3-5 short bullet points)
 - projects (array of 0-2 items: { "title": "...", "description": "..." })
 - exercises (array of 0-2 items: { "title": "...", "description": "..." })
-- resources (array of 0-3 items: { "title": "...", "url": "https://...", "type": "article"|"tutorial"|"video" })
+- resources (array of 0-3 items with SEARCHABLE titles - NO URLs needed)
 
+IMPORTANT - Resources Format:
+Instead of providing URLs (which may break), provide SEARCHABLE resource titles that users can easily find:
+- For YouTube: "Search YouTube: [specific search term]"
+- For articles: "Search Google: [article topic + site name]"
+- For docs: "Official [Technology] Documentation"
+
+Examples:
+✅ Good: { "title": "Search YouTube: React Hooks Tutorial for Beginners", "type": "video" }
+✅ Good: { "title": "MDN Web Docs: JavaScript Promises", "type": "tutorial" }
+✅ Good: { "title": "Search Google: CSS Grid Guide CSS-Tricks", "type": "article" }
+❌ Bad: { "title": "React Tutorial", "url": "https://...", "type": "video" }
+
+This approach ensures users can always find the resources by searching, even if specific URLs change.
 Respond with ONLY a valid JSON array, no markdown or extra text. Example format:
 [{"title":"...","description":"...","estimatedMinutes":15,"keyPoints":["..."],"projects":[],"exercises":[],"resources":[]}]`
 

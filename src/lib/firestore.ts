@@ -303,6 +303,10 @@ export async function deleteCourse(courseId: string): Promise<void> {
   await deleteDoc(doc(db, COURSES, courseId))
 }
 
+export async function deleteCourseProgress(progressId: string): Promise<void> {
+  await deleteDoc(doc(db, COURSE_PROGRESS, progressId))
+}
+
 // ---- Course progress ----
 
 export async function getProgressByCourse(
@@ -394,4 +398,21 @@ export async function getCompletedCoursesGroupedByCategory(
     )
   }
   return byCategory
+}
+
+export async function wipeUserData(userId: string): Promise<void> {
+  const deleteBatch = async (collectionName: string) => {
+    const q = query(collection(db, collectionName), where('userId', '==', userId))
+    const snap = await getDocs(q)
+    const deletes = snap.docs.map(d => deleteDoc(d.ref))
+    await Promise.all(deletes)
+  }
+
+  await Promise.all([
+    deleteBatch(USER_PROGRESS),
+    deleteBatch(COURSE_PROGRESS),
+    deleteBatch(COURSES),
+    deleteBatch(CATEGORIES),
+    deleteBatch(ACHIEVEMENTS)
+  ])
 }

@@ -22,6 +22,20 @@ const LEVELS = [
   { value: 'Expert (quite experienced)', label: 'Expert' },
 ]
 
+const LEARNING_STYLES = [
+  { value: 'Visual', label: '📊 Visual', description: 'Diagrams, infographics' },
+  { value: 'Reading', label: '📖 Reading', description: 'Articles, documentation' },
+  { value: 'Hands-on', label: '🛠️ Hands-on', description: 'Projects, exercises' },
+  { value: 'Video', label: '🎥 Video', description: 'YouTube tutorials' },
+]
+
+const COURSE_STRUCTURES = [
+  { value: 'Project-based', label: 'Project-based (learn by building)' },
+  { value: 'Theory-first', label: 'Theory-first (concepts then practice)' },
+  { value: 'Balanced', label: 'Balanced (mixed approach)' },
+  { value: 'Fast-track', label: 'Fast-track (essentials only)' },
+]
+
 interface GenerateCourseModalProps {
   isOpen: boolean
   onClose: () => void
@@ -41,6 +55,9 @@ export function GenerateCourseModal({
 }: GenerateCourseModalProps) {
   const [goal, setGoal] = useState('')
   const [level, setLevel] = useState('')
+  const [detailedGoal, setDetailedGoal] = useState('')
+  const [learningStyle, setLearningStyle] = useState('')
+  const [courseStructure, setCourseStructure] = useState('')
   const [generating, setGenerating] = useState(false)
   const [alreadyLearnedTitles, setAlreadyLearnedTitles] = useState<string[]>([])
 
@@ -63,7 +80,10 @@ export function GenerateCourseModal({
         categoryName,
         goal,
         level,
-        alreadyLearnedTitles
+        alreadyLearnedTitles,
+        detailedGoal,
+        learningStyle,
+        courseStructure
       )
       const topics: CourseTopic[] = topicsInput.map((t) => ({
         id: t.id,
@@ -108,11 +128,10 @@ export function GenerateCourseModal({
                   key={g.value}
                   type="button"
                   onClick={() => setGoal(g.value)}
-                  className={`rounded-lg border px-3 py-2 text-sm ${
-                    goal === g.value
-                      ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400'
-                      : 'border-slate-600 text-slate-400 hover:border-slate-500'
-                  }`}
+                  className={`rounded-lg border px-3 py-2 text-sm ${goal === g.value
+                    ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400'
+                    : 'border-slate-600 text-slate-400 hover:border-slate-500'
+                    }`}
                 >
                   {g.label}
                 </button>
@@ -127,16 +146,62 @@ export function GenerateCourseModal({
                   key={l.value}
                   type="button"
                   onClick={() => setLevel(l.value)}
-                  className={`rounded-lg border px-3 py-2 text-sm ${
-                    level === l.value
-                      ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400'
-                      : 'border-slate-600 text-slate-400 hover:border-slate-500'
-                  }`}
+                  className={`rounded-lg border px-3 py-2 text-sm ${level === l.value
+                    ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400'
+                    : 'border-slate-600 text-slate-400 hover:border-slate-500'
+                    }`}
                 >
                   {l.label}
                 </button>
               ))}
             </div>
+          </label>
+
+          <label className="block">
+            <span className="text-sm font-medium text-slate-300">What specifically do you want to learn? (optional)</span>
+            <textarea
+              value={detailedGoal}
+              onChange={(e) => setDetailedGoal(e.target.value)}
+              placeholder="e.g., I want to build a mobile app for tracking expenses..."
+              className="mt-2 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-cyan-500 focus:outline-none"
+              rows={2}
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-sm font-medium text-slate-300">Preferred learning style (optional)</span>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {LEARNING_STYLES.map((ls) => (
+                <button
+                  key={ls.value}
+                  type="button"
+                  onClick={() => setLearningStyle(ls.value)}
+                  className={`flex flex-col items-start rounded-lg border px-3 py-2 text-left text-sm transition ${learningStyle === ls.value
+                      ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400'
+                      : 'border-slate-600 text-slate-400 hover:border-slate-500'
+                    }`}
+                >
+                  <span className="font-medium">{ls.label}</span>
+                  <span className="text-xs text-slate-500">{ls.description}</span>
+                </button>
+              ))}
+            </div>
+          </label>
+
+          <label className="block">
+            <span className="text-sm font-medium text-slate-300">Course structure (optional)</span>
+            <select
+              value={courseStructure}
+              onChange={(e) => setCourseStructure(e.target.value)}
+              className="mt-2 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none"
+            >
+              <option value="">Select structure...</option>
+              {COURSE_STRUCTURES.map((cs) => (
+                <option key={cs.value} value={cs.value}>
+                  {cs.label}
+                </option>
+              ))}
+            </select>
           </label>
         </div>
 

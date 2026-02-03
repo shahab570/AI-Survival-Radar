@@ -8,34 +8,35 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == uid;
     }
     match /users/{userId} {
-      allow read if request.auth.uid == userId || request.auth.token.email == 'mjsahab570@gmail.com';
-      allow create if request.auth.uid == userId;
-      allow update if request.auth.uid == userId || request.auth.token.email == 'mjsahab570@gmail.com';
-      allow delete if request.auth.token.email == 'mjsahab570@gmail.com';
+      allow read: if request.auth.uid == userId || request.auth.token.email == 'mjsahab570@gmail.com';
+      allow create: if request.auth.uid == userId;
+      allow update: if request.auth.uid == userId || request.auth.token.email == 'mjsahab570@gmail.com';
+      allow delete: if request.auth.token.email == 'mjsahab570@gmail.com';
     }
     match /userProgress/{docId} {
-      allow read if isSignedIn() && resource.data.userId == request.auth.uid;
-      allow create if isSignedIn() && request.auth.uid == request.resource.data.userId;
-      allow update, delete if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
+      allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
     match /achievements/{docId} {
-      allow read if isSignedIn() && resource.data.userId == request.auth.uid;
-      allow create if isSignedIn() && request.auth.uid == request.resource.data.userId;
-      allow update, delete if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
+      allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
     match /categories/{docId} {
-      allow read, update, delete if isSignedIn() && resource.data.userId == request.auth.uid;
-      allow create if isSignedIn() && request.auth.uid == request.resource.data.userId;
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
+      allow update, delete: if isSignedIn() && (resource.data.userId == request.auth.uid || request.auth.token.email == 'mjsahab570@gmail.com');
     }
     match /courses/{docId} {
-      allow read if isSignedIn() && resource.data.userId == request.auth.uid;
-      allow create if isSignedIn() && request.auth.uid == request.resource.data.userId;
-      allow update, delete if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
+      allow update, delete: if isSignedIn() && (resource.data.userId == request.auth.uid || request.auth.token.email == 'mjsahab570@gmail.com');
     }
     match /courseProgress/{docId} {
-      allow read if isSignedIn() && resource.data.userId == request.auth.uid;
-      allow create if isSignedIn() && request.auth.uid == request.resource.data.userId;
-      allow update, delete if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || request.auth.token.email == 'mjsahab570@gmail.com');
+      allow create: if isSignedIn() && request.auth.uid == request.resource.data.userId;
+      allow update, delete: if isSignedIn() && (resource.data.userId == request.auth.uid || request.auth.token.email == 'mjsahab570@gmail.com');
     }
   }
 }

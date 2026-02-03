@@ -18,7 +18,6 @@ import {
   markTopicCompleted,
 } from '../lib/firestore'
 import type { Course, CourseProgress, CourseTopic } from '../types'
-import { MarkCompleteModal } from '../components/MarkCompleteModal'
 import { CompletionCelebration } from '../components/CompletionCelebration'
 import { cn } from '../lib/utils'
 
@@ -30,7 +29,6 @@ export function CourseDetail() {
   const [progress, setProgress] = useState<(CourseProgress & { id: string }) | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedTopicIndex, setSelectedTopicIndex] = useState(0)
-  const [topicToComplete, setTopicToComplete] = useState<string | null>(null)
   const [showCompletion, setShowCompletion] = useState(false)
 
   useEffect(() => {
@@ -48,17 +46,40 @@ export function CourseDetail() {
     })
   }, [courseId, firebaseUser?.uid])
 
-  const handleMarkComplete = async (learningMinutes: number) => {
-    if (!progress?.id || !topicToComplete) return
-    await markTopicCompleted(progress.id, topicToComplete, learningMinutes)
+  const handleMarkComplete = async () => {
+    if (!progress?.id || !selectedTopic) return
+    // Mark current topic complete with estimated time
+    const estimatedMinutes = selectedTopic.estimatedMinutes || 15
+    await markTopicCompleted(progress.id, selectedTopic.id, estimatedMinutes)
+
+    // Refresh data
     const [c, p] = await Promise.all([
       getCourse(courseId!),
       getProgressByCourse(firebaseUser!.uid, courseId!),
     ])
     setCourse(c ?? null)
     setProgress(p ?? null)
-    setTopicToComplete(null)
-    if (p?.completedAt != null) setShowCompletion(true)
+
+    // Auto-advance: find next incomplete topic
+    const topics = c?.topics ?? []
+    const newCompletedIds = new Set(
+      p ? Object.entries(p.topicCompleted ?? {}).filter(([, v]) => v).map(([k]) => k) : []
+    )
+
+    const nextIncompleteIndex = topics.findIndex(
+      (topic, idx) => idx > selectedTopicIndex && !newCompletedIds.has(topic.id)
+    )
+
+    if (nextIncompleteIndex !== -1) {
+      // Go to next topic
+      setSelectedTopicIndex(nextIncompleteIndex)
+    } else if (p?.completedAt != null) {
+      // Course complete - show celebration
+      setShowCompletion(true)
+    } else {
+      // All visible topics done but course not complete - go back to overview
+      navigate('/dashboard/skills')
+    }
   }
 
   if (loading) {
@@ -178,16 +199,20 @@ export function CourseDetail() {
                   </h3>
                   <ul className="mt-2 space-y-2">
                     {selectedTopic.resources.map((r, i) => (
-                      <li key={i}>
-                        <a
-                          href={r.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-cyan-400 hover:underline"
-                        >
-                          {r.title}
-                        </a>
-                        <span className="ml-2 text-xs text-slate-500">{r.type}</span>
+                      <li key={i} className="rounded-lg border border-slate-600 bg-slate-800/50 p-3">
+                        {r.url ? (
+                          <a
+                            href={r.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-cyan-400 hover:underline"
+                          >
+                            {r.title}
+                          </a>
+                        ) : (
+                          <p className="font-medium text-cyan-300">{r.title}</p>
+                        )}
+                        <span className="ml-2 text-xs text-slate-500">({r.type})</span>
                       </li>
                     ))}
                   </ul>
@@ -196,10 +221,10 @@ export function CourseDetail() {
               {isTopicUnlocked(selectedTopicIndex) && !isTopicCompleted(selectedTopic) && (
                 <button
                   type="button"
-                  onClick={() => setTopicToComplete(selectedTopic.id)}
+                  onClick={handleMarkComplete}
                   className="mt-6 rounded-lg bg-cyan-500 px-4 py-2.5 text-sm font-medium text-slate-900 hover:bg-cyan-400"
                 >
-                  Mark topic as finished
+                  Mark as finished
                 </button>
               )}
             </>
@@ -256,13 +281,6 @@ export function CourseDetail() {
           </div>
         </aside>
       </div>
-
-      <MarkCompleteModal
-        isOpen={topicToComplete !== null}
-        topicTitle={topics.find((t) => t.id === topicToComplete)?.title ?? ''}
-        onClose={() => setTopicToComplete(null)}
-        onComplete={handleMarkComplete}
-      />
     </div>
   )
 }

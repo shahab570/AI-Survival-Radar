@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { FlaskConical, Trophy, Newspaper, ChevronRight } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import { getProgressByUserForCourses, getCourse } from '../lib/firestore'
+import { getProgressByUserForCourses, getCourse, getCompletedCoursesGroupedByCategory } from '../lib/firestore'
 import { FINLAND_NEWS, GLOBAL_NEWS } from '../data/news'
 import { formatRelativeTime } from '../lib/utils'
 import { cn } from '../lib/utils'
@@ -25,11 +25,19 @@ export function Dashboard() {
       setLoading(false)
       return
     }
-    getProgressByUserForCourses(uid).then((list) => {
+
+    Promise.all([
+      getProgressByUserForCourses(uid),
+      getCompletedCoursesGroupedByCategory(uid)
+    ]).then(([list, completedMap]) => {
       setCourseProgressList(list)
-      setCompletedCount(list.filter((p) => p.completedAt != null).length)
+
+      // Calculate total completed items from the achievement-linked map
+      const totalCompleted = Object.values(completedMap).reduce((acc: number, arr: any[]) => acc + arr.length, 0)
+      setCompletedCount(totalCompleted)
+
+      setLoading(false)
     })
-    setLoading(false)
   }, [firebaseUser?.uid])
 
   useEffect(() => {

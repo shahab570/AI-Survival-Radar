@@ -1,14 +1,40 @@
-import { useState } from 'react'
-import { GLOBAL_NEWS, NEWS_CATEGORIES } from '../data/news'
+import { useState, useEffect } from 'react'
+import { fetchGlobalNews } from '../lib/newsApi'
+import type { NewsItem } from '../types'
+
+const NEWS_CATEGORIES: Record<string, string> = {
+  education: 'AI Education & Training',
+  research: 'AI Research & Innovation',
+  jobs: 'AI Jobs & Workforce',
+  policy: 'AI Policies & Regulations',
+  ethics: 'AI Ethics & Challenges',
+}
 
 const CATEGORY_KEYS = Object.keys(NEWS_CATEGORIES)
 
 export function GlobalTrends() {
   const [category, setCategory] = useState<string>('all')
-  const filtered =
-    category === 'all'
-      ? GLOBAL_NEWS
-      : GLOBAL_NEWS.filter((n) => n.category === category)
+  const [news, setNews] = useState<NewsItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Fetch news when category changes
+  useEffect(() => {
+    setLoading(true)
+    setError(null)
+
+    fetchGlobalNews(category === 'all' ? undefined : category)
+      .then((data) => {
+        setNews(data)
+        setLoading(false)
+      })
+      .catch((err) => {
+        setError(err.message || 'Failed to load news')
+        setLoading(false)
+      })
+  }, [category])
+
+  const filtered = news
 
   return (
     <div className="mx-auto max-w-4xl space-y-8">
@@ -26,11 +52,10 @@ export function GlobalTrends() {
         <button
           type="button"
           onClick={() => setCategory('all')}
-          className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
-            category === 'all'
-              ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400'
-              : 'border-slate-600 text-slate-400 hover:border-slate-500 hover:text-slate-300'
-          }`}
+          className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${category === 'all'
+            ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400'
+            : 'border-slate-600 text-slate-400 hover:border-slate-500 hover:text-slate-300'
+            }`}
         >
           All
         </button>
@@ -39,36 +64,53 @@ export function GlobalTrends() {
             key={key}
             type="button"
             onClick={() => setCategory(key)}
-            className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
-              category === key
-                ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400'
-                : 'border-slate-600 text-slate-400 hover:border-slate-500 hover:text-slate-300'
-            }`}
+            className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${category === key
+              ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400'
+              : 'border-slate-600 text-slate-400 hover:border-slate-500 hover:text-slate-300'
+              }`}
           >
             {NEWS_CATEGORIES[key]}
           </button>
         ))}
       </div>
 
-      <div className="space-y-4">
-        {filtered.map((item) => (
-          <a
-            key={item.id}
-            href={item.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block rounded-xl border border-slate-700/50 bg-slate-800/30 p-4 transition hover:border-cyan-500/50"
-          >
-            <p className="font-medium text-white">{item.title}</p>
-            {(item.summary ?? item.excerpt) && (
-              <p className="mt-1 text-sm text-slate-400">{item.summary ?? item.excerpt}</p>
-            )}
-            <p className="mt-2 text-xs text-slate-500">
-              {item.source} · {item.date}
-            </p>
-          </a>
-        ))}
-      </div>
+      {loading && (
+        <div className="text-center text-slate-400">
+          <p>Loading latest global AI news...</p>
+        </div>
+      )}
+
+      {error && (
+        <div className="rounded-lg border border-red-500/50 bg-red-500/10 p-4 text-red-400">
+          <p>⚠️ {error}</p>
+        </div>
+      )}
+
+      {!loading && !error && (
+        <div className="space-y-4">
+          {filtered.length === 0 ? (
+            <p className="text-slate-500">No news found for this category.</p>
+          ) : (
+            filtered.map((item) => (
+              <a
+                key={item.id}
+                href={item.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block rounded-xl border border-slate-700/50 bg-slate-800/30 p-4 transition hover:border-cyan-500/50"
+              >
+                <p className="font-medium text-white">{item.title}</p>
+                {(item.summary ?? item.excerpt) && (
+                  <p className="mt-1 text-sm text-slate-400">{item.summary ?? item.excerpt}</p>
+                )}
+                <p className="mt-2 text-xs text-slate-500">
+                  {item.source} · {item.date}
+                </p>
+              </a>
+            ))
+          )}
+        </div>
+      )}
     </div>
   )
 }

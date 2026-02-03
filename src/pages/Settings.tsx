@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { updateUserPreferences } from '../lib/firestore'
+import { updateUserPreferences, wipeUserData } from '../lib/firestore'
 
 export function Settings() {
   const { firebaseUser, appUser } = useAuth()
@@ -8,6 +8,9 @@ export function Settings() {
   const [notifications, setNotifications] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [wiping, setWiping] = useState(false)
+  const [confirmWipe, setConfirmWipe] = useState(false)
+  const [wipeDone, setWipeDone] = useState(false)
 
   useEffect(() => {
     if (appUser?.preferences) {
@@ -32,7 +35,24 @@ export function Settings() {
     }
   }
 
-  const displayName = appUser?.displayName ?? firebaseUser?.displayName ?? '—'
+  const handleWipeData = async () => {
+    if (!firebaseUser?.uid) return
+    setWiping(true)
+    try {
+      await wipeUserData(firebaseUser.uid)
+      setWipeDone(true)
+      setConfirmWipe(false)
+      // Just a quick reload to refresh all state after deletion
+      setTimeout(() => window.location.reload(), 2000)
+    } catch (e) {
+      console.error('Failed to wipe data', e)
+      alert('Failed to wipe data. Please try again.')
+    } finally {
+      setWiping(false)
+    }
+  }
+
+  const displayName = appUser?.displayName ?? firebaseUser?.displayName ?? 'Learner'
   const email = appUser?.email ?? firebaseUser?.email ?? '—'
   const photoURL = appUser?.photoURL ?? firebaseUser?.photoURL ?? null
 
@@ -50,10 +70,10 @@ export function Settings() {
             <img
               src={photoURL}
               alt=""
-              className="h-16 w-16 rounded-full object-cover"
+              className="h-16 w-16 rounded-full object-cover shadow-lg border border-slate-700"
             />
           ) : (
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-cyan-500/30 text-2xl font-medium text-cyan-400">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-cyan-500/20 text-2xl font-medium text-cyan-400 border border-cyan-500/30">
               {displayName.charAt(0).toUpperCase()}
             </div>
           )}
@@ -96,35 +116,63 @@ export function Settings() {
           type="button"
           onClick={handleSave}
           disabled={saving}
-          className="mt-4 rounded-lg bg-cyan-500 px-4 py-2.5 text-sm font-medium text-slate-900 disabled:opacity-50 hover:bg-cyan-400"
+          className="mt-4 rounded-lg bg-cyan-500 px-4 py-2.5 text-sm font-medium text-slate-900 disabled:opacity-50 hover:bg-cyan-400 font-semibold"
         >
           {saving ? 'Saving…' : saved ? 'Saved!' : 'Save preferences'}
         </button>
       </section>
 
-      <section className="rounded-xl border border-slate-700/50 bg-slate-800/30 p-5">
-        <h2 className="text-lg font-semibold text-white">Legal</h2>
-        <div className="mt-4 flex flex-wrap gap-4 text-sm">
-          <a href="#" className="text-cyan-400 hover:underline">
-            Privacy policy
-          </a>
-          <a href="#" className="text-cyan-400 hover:underline">
-            Terms of service
-          </a>
-        </div>
-      </section>
-
       <section className="rounded-xl border border-red-500/20 bg-red-500/5 p-5">
         <h2 className="text-lg font-semibold text-white">Danger zone</h2>
-        <p className="mt-2 text-sm text-slate-400">
-          Deleting your account will remove all progress and data. This cannot be undone.
-        </p>
-        <button
-          type="button"
-          className="mt-4 rounded-lg border border-red-500/50 px-4 py-2.5 text-sm font-medium text-red-400 hover:bg-red-500/10"
-        >
-          Delete account
-        </button>
+        <div className="mt-4 space-y-6">
+          <div>
+            <p className="text-sm font-medium text-white">Wipe My Progress</p>
+            <p className="mt-1 text-sm text-slate-400">
+              This will safely delete all your generated courses, topics, categories, and achievements. Your account and preferences will stay.
+            </p>
+            {!confirmWipe ? (
+              <button
+                type="button"
+                onClick={() => setConfirmWipe(true)}
+                className="mt-4 rounded-lg border border-red-500/50 px-4 py-2 text-sm font-medium text-red-400 hover:bg-red-500/10 transition-colors"
+              >
+                Wipe all test data
+              </button>
+            ) : (
+              <div className="mt-4 flex items-center gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                <button
+                  type="button"
+                  onClick={handleWipeData}
+                  disabled={wiping}
+                  className="rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-50"
+                >
+                  {wiping ? 'Wiping...' : wipeDone ? 'Success!' : 'Yes, delete everything'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmWipe(false)}
+                  className="rounded-lg border border-slate-600 px-4 py-2 text-sm font-medium text-slate-400 hover:bg-slate-700"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+            {wipeDone && <p className="mt-2 text-sm text-green-400 font-medium">Data cleared! Refreshing app...</p>}
+          </div>
+
+          <div className="pt-4 border-t border-red-500/10">
+            <p className="text-sm font-medium text-white">Delete account</p>
+            <p className="mt-1 text-sm text-slate-400">
+              Permanently delete your profile and all data.
+            </p>
+            <button
+              type="button"
+              className="mt-4 rounded-lg bg-red-500/10 border border-red-500/20 px-4 py-2 text-sm font-medium text-red-500 hover:bg-red-500/20"
+            >
+              Delete account
+            </button>
+          </div>
+        </div>
       </section>
     </div>
   )
