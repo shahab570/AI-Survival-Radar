@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Plus,
+  Pencil,
+  Trash2,
   BookOpen,
   Loader2,
   ChevronRight,
@@ -15,6 +17,7 @@ import {
   deleteCategory,
   getCoursesByCategory,
   getProgressByUserForCourses,
+  deleteCourse,
 } from '../lib/firestore'
 import type { LearningCategory, Course, CourseProgress } from '../types'
 import { GenerateCourseModal } from '../components/GenerateCourseModal'
@@ -34,6 +37,7 @@ export function SkillsLab() {
   const [categoryToEdit, setCategoryToEdit] = useState<(LearningCategory & { id: string }) | null>(null)
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null)
   const [newCategoryName, setNewCategoryName] = useState('')
+  const [courseToDelete, setCourseToDelete] = useState<string | null>(null)
 
   const selectedCategory = categories.find((c) => c.id === selectedCategoryId)
 
@@ -108,6 +112,14 @@ export function SkillsLab() {
       getCoursesByCategory(firebaseUser.uid, selectedCategoryId).then(setCourses)
   }
 
+  const handleDeleteCourse = async () => {
+    if (!courseToDelete) return
+    await deleteCourse(courseToDelete)
+    setCourseToDelete(null)
+    if (selectedCategoryId && firebaseUser?.uid)
+      getCoursesByCategory(firebaseUser.uid, selectedCategoryId).then(setCourses)
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
@@ -126,19 +138,39 @@ export function SkillsLab() {
       {/* Category tabs */}
       <div className="flex flex-wrap items-center gap-2">
         {categories.map((cat) => (
-          <button
+          <div
             key={cat.id}
-            type="button"
-            onClick={() => setSelectedCategoryId(cat.id)}
             className={cn(
-              'rounded-lg border px-4 py-2 font-medium transition',
+              'group flex items-center gap-1 rounded-lg border px-3 py-2 transition',
               selectedCategoryId === cat.id
                 ? 'border-cyan-500 bg-cyan-500/20 text-cyan-400'
                 : 'border-slate-600 bg-slate-800/50 text-slate-300 hover:border-slate-500'
             )}
           >
-            {cat.name}
-          </button>
+            <button
+              type="button"
+              onClick={() => setSelectedCategoryId(cat.id)}
+              className="font-medium"
+            >
+              {cat.name}
+            </button>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setCategoryToEdit(cat) }}
+              className="rounded p-1 text-slate-400 opacity-0 transition group-hover:opacity-100 hover:bg-slate-700 hover:text-white"
+              aria-label="Edit category"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setCategoryToDelete(cat.id) }}
+              className="rounded p-1 text-slate-400 opacity-0 transition group-hover:opacity-100 hover:bg-red-500/20 hover:text-red-400"
+              aria-label="Delete category"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
         ))}
         <div className="flex items-center gap-2 rounded-lg border border-dashed border-slate-600 px-3 py-2">
           <input
@@ -191,7 +223,7 @@ export function SkillsLab() {
                   )
                   : 0
                 return (
-                  <li key={course.id}>
+                  <li key={course.id} className="group relative">
                     <Link
                       to={`/dashboard/skills/course/${course.id}`}
                       className="flex items-center justify-between rounded-lg border border-slate-700/50 bg-slate-800/50 p-4 transition hover:border-cyan-500/50"
@@ -208,6 +240,14 @@ export function SkillsLab() {
                       </div>
                       <ChevronRight className="h-5 w-5 text-slate-500" />
                     </Link>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setCourseToDelete(course.id) }}
+                      className="absolute right-12 top-1/2 -translate-y-1/2 rounded p-2 text-slate-400 opacity-0 transition group-hover:opacity-100 hover:bg-red-500/20 hover:text-red-400"
+                      aria-label="Delete course"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </li>
                 )
               })}
@@ -246,6 +286,30 @@ export function SkillsLab() {
               <button
                 type="button"
                 onClick={() => handleDeleteCategory()}
+                className="rounded-lg bg-red-500 px-4 py-2 text-white hover:bg-red-600"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {courseToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="rounded-xl border border-slate-700 bg-slate-800 p-6 shadow-xl">
+            <p className="text-white">Delete this course? This action cannot be undone.</p>
+            <div className="mt-4 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setCourseToDelete(null)}
+                className="rounded-lg border border-slate-600 px-4 py-2 text-slate-300 hover:bg-slate-700"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteCourse()}
                 className="rounded-lg bg-red-500 px-4 py-2 text-white hover:bg-red-600"
               >
                 Delete
